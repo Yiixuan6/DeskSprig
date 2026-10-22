@@ -18,6 +18,10 @@
 /assets/*
 !/assets/*.png
 !/assets/*.ico
+!/assets/languages/
+/assets/languages/*
+!/assets/languages/*.json
+
 !/assets/icons/
 /assets/icons/*
 !/assets/icons/*.svg

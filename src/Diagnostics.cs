@@ -14,7 +14,7 @@ using Microsoft.Win32;
 namespace DesktopWidgets
 {
     // Verification uses a fresh adjacent directory and skips login autostart/tray changes.
-    public static class Diagnostics
+    public static partial class Diagnostics
     {
         public static bool Failed;
         static readonly List<string> report = new List<string>();
@@ -42,6 +42,7 @@ namespace DesktopWidgets
         }
         static async Task Verify(WidgetApp app, string evidence)
         {
+            app.SetLanguage("zh-CN"); // Keep existing Chinese assertions independent of the host display language.
             Check(Environment.Is64BitProcess, "x64 process");
             Check(app.Widgets.Count == 6 && app.Widgets.All(w => w.IsVisible), "six windows visible");
             Check(app.Theme.Status == "UISettings 强调色", "Windows UISettings color adapter: " + app.Theme.Status);
@@ -226,7 +227,7 @@ namespace DesktopWidgets
             w.SetVisible(false); DesktopHost.FailForVerification=true; bool recovered; try { recovered=!w.SetMode(3); } finally { DesktopHost.FailForVerification=false; } Check(recovered && w.State.Mode==2 && w.IsVisible && app.LastError.Contains("第 2 档"),"desktop attachment failure recovers visible locked window"); w.SetMode(1);
             app.Settings.Theme="dark"; app.Theme.Refresh(); var menu=app.CreateTrayMenu(); menu.IsOpen=true; await Task.Delay(100); CaptureElement(menu,Path.Combine(evidence,"tray-dark.png")); var submenu=menu.Items.OfType<MenuItem>().First(m=>(string)m.Header=="主题"); submenu.IsSubmenuOpen=true; await Task.Delay(100); if(submenu.Items.Count>0) CaptureElement((FrameworkElement)((System.Windows.Controls.Primitives.Popup)submenu.Template.FindName("PART_Popup",submenu)).Child,Path.Combine(evidence,"tray-dark-submenu.png")); menu.IsOpen=false;
             Check(menu.Style!=null && submenu.Style!=null,"tray and submenu use complete application theme templates"); app.Settings.Theme="system"; app.Theme.Refresh();
-            await V131Checks(app,evidence); await V144Checks(app,evidence); await V143Checks(app,evidence); await V142Checks(app,evidence); await V14Checks(app,evidence);
+            await V131Checks(app,evidence); await V144Checks(app,evidence); await V143Checks(app,evidence); await V142Checks(app,evidence); await V14Checks(app,evidence); await LanguageChecks(app,evidence);
         }
         static async Task V144Checks(WidgetApp app,string evidence)
         {

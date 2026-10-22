@@ -40,13 +40,13 @@ namespace DesktopWidgets
             source = new HwndSource(new HwndSourceParameters("DesktopWidgets.Tray") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) });
             source.AddHook(Hook); taskbarCreated = RegisterWindowMessage("TaskbarCreated");
             brandIcon = Icons.TrayIcon();
-            data = new IconData { Size = (uint)Marshal.SizeOf(typeof(IconData)), Window = source.Handle, Id = 1, Flags = 7, Callback = 0x8001, Icon = brandIcon != IntPtr.Zero ? brandIcon : LoadIcon(IntPtr.Zero, new IntPtr(32512)), Tip = "桌面小组件 · 点击打开管理", Info = "", Title = "" };
+            data = new IconData { Size = (uint)Marshal.SizeOf(typeof(IconData)), Window = source.Handle, Id = 1, Flags = 7, Callback = 0x8001, Icon = brandIcon != IntPtr.Zero ? brandIcon : LoadIcon(IntPtr.Zero, new IntPtr(32512)), Tip = L.T("桌面小组件 · 点击打开管理"), Info = "", Title = "" };
             Add();
         }
         void Add()
         {
             data.Flags = 7; Added = Shell_NotifyIcon(0, ref data);
-            if (!Added) throw new InvalidOperationException("无法创建托盘图标。");
+            if (!Added) throw new InvalidOperationException(L.T("无法创建托盘图标。"));
             data.VersionOrTimeout = 4; Shell_NotifyIcon(4, ref data);
         }
         IntPtr Hook(IntPtr h, int msg, IntPtr w, IntPtr l, ref bool handled)
@@ -83,6 +83,11 @@ namespace DesktopWidgets
             if (Added) { Shell_NotifyIcon(2, ref data); Added = false; }
             source.Dispose();
             if (brandIcon != IntPtr.Zero) { Icons.DestroyIcon(brandIcon); brandIcon = IntPtr.Zero; }
+        }
+        public void RefreshLanguage()
+        {
+            if(menu!=null) menu.IsOpen=false;
+            data.Tip=L.T("桌面小组件 · 点击打开管理"); data.Flags=4; if(Added) Shell_NotifyIcon(1,ref data);
         }
         public void RefreshIcon()
         {

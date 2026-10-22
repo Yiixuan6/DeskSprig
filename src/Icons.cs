@@ -31,7 +31,7 @@ namespace DesktopWidgets
             {
                 using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Icons." + name + ".svg"))
                 {
-                    if (stream == null) throw new InvalidOperationException("缺少图标资源：" + name);
+                    if (stream == null) throw new InvalidOperationException(L.T("缺少图标资源：") + name);
                     var doc = XDocument.Load(stream); var group = new GeometryGroup { FillRule = FillRule.Nonzero };
                     foreach (var path in doc.Descendants()) if (path.Name.LocalName == "path") group.Children.Add(Geometry.Parse((string)path.Attribute("d")));
                     group.Freeze(); cached = group; geometry.Add(name, cached);
@@ -64,7 +64,7 @@ namespace DesktopWidgets
         }
         public static string Import(string file,string directory)
         {
-            string ext=Path.GetExtension(file).ToLowerInvariant(); if(ext!=".png" && ext!=".jpg" && ext!=".jpeg" && ext!=".ico") throw new InvalidDataException("请选择 ICO、PNG 或 JPG。"); Decode(file);
+            string ext=Path.GetExtension(file).ToLowerInvariant(); if(ext!=".png" && ext!=".jpg" && ext!=".jpeg" && ext!=".ico") throw new InvalidDataException(L.T("请选择 ICO、PNG 或 JPG。")); Decode(file);
             string relative="icons/"+Guid.NewGuid().ToString("N")+ext; Directory.CreateDirectory(Path.Combine(directory,"icons")); File.Copy(file,Path.Combine(directory,relative)); return relative;
         }
         public static ImageSource Shortcut(ShortcutItem item,string directory)

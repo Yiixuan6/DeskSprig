@@ -32,7 +32,7 @@ namespace DesktopWidgets
             var dialog = (IFileDialog)new FileOpenDialog(); IShellItem item = null;
             try
             {
-                uint options; dialog.GetOptions(out options); dialog.SetOptions(options | 0x20 | 0x40 | 0x800 | 8); dialog.SetTitle("选择快捷入口文件夹");
+                uint options; dialog.GetOptions(out options); dialog.SetOptions(options | 0x20 | 0x40 | 0x800 | 8); dialog.SetTitle(L.T("选择快捷入口文件夹"));
                 int hr = dialog.Show(new WindowInteropHelper(owner).Handle);
                 if (hr == unchecked((int)0x800704c7)) return null;
                 Marshal.ThrowExceptionForHR(hr); dialog.GetResult(out item);

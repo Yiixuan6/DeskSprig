@@ -70,10 +70,10 @@ namespace DesktopWidgets
         public void Attach()
         {
             if(Attached) return;
-            Dispose(); Parent=FindHost(); if(Parent==IntPtr.Zero) throw new InvalidOperationException("未找到 Explorer 桌面宿主。");
+            Dispose(); Parent=FindHost(); if(Parent==IntPtr.Zero) throw new InvalidOperationException(L.T("未找到 Explorer 桌面宿主。"));
             IntPtr context=GetWindowDpiAwarenessContext(Parent);
             IntPtr previous=SetThreadDpiAwarenessContext(context);
-            if(previous==IntPtr.Zero) throw new InvalidOperationException("无法建立兼容的桌面 DPI 上下文。");
+            if(previous==IntPtr.Zero) throw new InvalidOperationException(L.T("无法建立兼容的桌面 DPI 上下文。"));
             Native.Rect bounds; Native.GetWindowRect(new WindowInteropHelper(window).Handle,out bounds);
             var point=new Point { X=bounds.Left,Y=bounds.Top }; ScreenToClient(Parent,ref point);
             try
@@ -97,7 +97,7 @@ namespace DesktopWidgets
                 root.PreviewMouseDown+=FocusOnMouse;
                 source.RootVisual=surface; window.Hide(); SetVisible(window.State.Visible);
                 RefreshName();
-                if(!Attached) throw new InvalidOperationException("桌面挂接校验失败。");
+                if(!Attached) throw new InvalidOperationException(L.T("桌面挂接校验失败。"));
             }
             catch { Dispose(); throw; }
             finally { SetThreadDpiAwarenessContext(previous); }

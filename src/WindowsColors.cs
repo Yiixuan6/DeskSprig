@@ -58,7 +58,7 @@ namespace DesktopWidgets
         }
         public Color Get(int type)
         {
-            if (settings == null) throw new InvalidOperationException(Error ?? "系统配色接口不可用。");
+            if (settings == null) throw new InvalidOperationException(Error ?? L.T("系统配色接口不可用。"));
             WinColor c = settings.GetColorValue(type);
             return Color.FromRgb(c.R, c.G, c.B);
         }

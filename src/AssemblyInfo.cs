@@ -7,5 +7,5 @@ using System.Reflection;
 
 namespace DesktopWidgets
 {
-    internal static class AppVersion { public const string Value = "1.4.5.0"; }
+    internal static class AppVersion { public const string Value = "1.5.0.0"; }
 }

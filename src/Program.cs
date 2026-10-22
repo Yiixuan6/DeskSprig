@@ -44,10 +44,11 @@ namespace DesktopWidgets
 
         [STAThread] public static int Main(string[] args)
         {
+            L.Select("system");
             bool measure = args.Length > 0 && args[0].StartsWith("--measure");
             bool verification = args.Length > 0 && (args[0] == "--verify" || args[0] == "--measure" || args[0] == "--measure-hardware" || args[0]=="--measure-desktop" || args[0]=="--measure-groups");
             bool manage = args.Length > 0 && args[0] == "--manage";
-            if (args.Length > 0 && !verification && !manage) { MessageBox.Show("未知参数。请直接运行程序。", "桌面小组件"); return 2; }
+            if (args.Length > 0 && !verification && !manage) { MessageBox.Show(L.T("未知参数。请直接运行程序。"), L.T("桌面小组件")); return 2; }
             // Small, mostly static cards need no GPU scene resources; compare with --measure-hardware in diagnostics.
             RenderOptions.ProcessRenderMode = args.Length > 0 && args[0] == "--measure-hardware" ? RenderMode.Default : RenderMode.SoftwareOnly;
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
@@ -84,8 +85,8 @@ namespace DesktopWidgets
                 }
                 catch (Exception ex)
                 {
-                    string message = "启动失败：" + ex.Message + "\n请确认程序所在目录可写，且已安装 .NET Framework 4.8。数据不会改存其他目录。";
-                    if (verification) File.WriteAllText(Path.Combine(basePath, "verification-fatal.txt"), ex.ToString()); else MessageBox.Show(message, "桌面小组件", MessageBoxButton.OK, MessageBoxImage.Error);
+                    string message = L.T("启动失败：{0}\n请确认程序所在目录可写，且已安装 .NET Framework 4.8。数据不会改存其他目录。",ex.Message);
+                    if (verification) File.WriteAllText(Path.Combine(basePath, "verification-fatal.txt"), ex.ToString()); else MessageBox.Show(message, L.T("桌面小组件"), MessageBoxButton.OK, MessageBoxImage.Error);
                     return 1;
                 }
                 finally { mutex.ReleaseMutex(); }
@@ -96,8 +97,8 @@ namespace DesktopWidgets
             Storage = new Storage(directory);
             Data = Storage.Load("business.json", BusinessData.Valid, delegate { return new BusinessData(); });
             Settings = Storage.Load("settings.json", Settings.Valid, delegate { return new Settings(); });
-            Settings.Migrate();
-            foreach(string group in Data.Shortcuts.Where(s=>s.GroupId!=null).Select(s=>s.GroupId).Distinct()) if(!Settings.Windows.Any(w=>w.Id==group)) { Settings.Windows.Add(NewShortcutState(group,"恢复的快捷入口")); Storage.RecoveryNotice+="已恢复缺失布局的快捷入口组件，内容保留。\n"; }
+            Settings.Migrate(); L.Select(Settings.Language);
+            foreach(string group in Data.Shortcuts.Where(s=>s.GroupId!=null).Select(s=>s.GroupId).Distinct()) if(!Settings.Windows.Any(w=>w.Id==group)) { Settings.Windows.Add(NewShortcutState(group,L.T("恢复的快捷入口"))); Storage.RecoveryNotice+=L.T("已恢复缺失布局的快捷入口组件，内容保留。\n"); }
             Theme = new Theme(this);
             var work = SystemParameters.WorkArea;
             for (int i = 0; i < Ids.Length; i++)
@@ -129,14 +130,14 @@ namespace DesktopWidgets
                 if (window.State.Visible) window.Show();
             }
             foreach(var window in Widgets) if(window.State.Mode==3) window.SetMode(3);
-            SystemEvents.DisplaySettingsChanged += DisplayChanged;
+            SystemEvents.DisplaySettingsChanged += DisplayChanged; SystemEvents.UserPreferenceChanged += LanguagePreferenceChanged;
             DispatcherUnhandledException += Unhandled;
             scheduler = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
             scheduler.Tick += Tick; UpdateSchedule();
             if (!Verifying)
             {
                 try { Native.SetAutoStart(Settings.AutoStart, executable); }
-                catch (Exception ex) { Error("无法更新登录自启。\n" + ex.Message); }
+                catch (Exception ex) { Error(L.T("无法更新登录自启。\n") + ex.Message); }
             }
             Settings.Initialized = true;
             SaveData(); SaveSettings();
@@ -178,18 +179,19 @@ namespace DesktopWidgets
             catch (Exception ex) { settingsDirty = true; settingsDue = DateTime.UtcNow.AddSeconds(30); SaveError(ex); return false; }
         }
         void SaveError(Exception ex)
-        { if (!saveErrorShown) { saveErrorShown = true; Error("保存失败，修改暂时只在内存中。请恢复目录写入权限后再退出。\n" + ex.Message); } }
+        { if (!saveErrorShown) { saveErrorShown = true; Error(L.T("保存失败，修改暂时只在内存中。请恢复目录写入权限后再退出。\n") + ex.Message); } }
         public void Error(string message)
-        { LastError = message; if (!Verifying) MessageBox.Show(message, "桌面小组件", MessageBoxButton.OK, MessageBoxImage.Information); }
+        { LastError = message; if (!Verifying) MessageBox.Show(message, L.T("桌面小组件"), MessageBoxButton.OK, MessageBoxImage.Information); }
         public void Balloon(string title, string message) { if (tray != null) tray.Balloon(title, message); }
         public void ShowTimerNotice()
         {
             if (timerNotice != null) return;
-            timerNotice = new Window { Title = "倒计时结束", Width = 300, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterScreen, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = true };
+            timerNotice = new Window { Title = L.T("倒计时结束"), Width = 300, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterScreen, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = true };
+            L.Bind(timerNotice,Window.TitleProperty,"倒计时结束");
             timerNotice.SetResourceReference(Window.BackgroundProperty, "SolidCard");
             timerNotice.SetResourceReference(Control.ForegroundProperty, "Ink");
             Native.StyleWindow(timerNotice);
-            var panel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) }; panel.Children.Add(Ui.Text("倒计时结束", 20)); panel.Children.Add(Ui.Text("设定的时间已到。", 14)); panel.Children.Add(Ui.Button("知道了", "关闭提示", delegate { timerNotice.Close(); })); timerNotice.Content = panel;
+            var panel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) }; panel.Children.Add(Ui.Label("倒计时结束", 20)); panel.Children.Add(Ui.Label("设定的时间已到。", 14)); panel.Children.Add(Ui.LocalButton("知道了", "关闭提示", delegate { timerNotice.Close(); })); timerNotice.Content = panel;
             timerNotice.Closed += delegate { timerNotice = null; }; timerNotice.Show();
         }
         public void RestoreAll() { foreach (var window in Widgets) window.SetVisible(true); }
@@ -217,11 +219,29 @@ namespace DesktopWidgets
             var state=NewShortcutState("shortcuts-"+Guid.NewGuid().ToString("N"),name); Settings.Windows.Add(state); var widget=new ShortcutWidget(this,state); Widgets.Add(widget); new WindowInteropHelper(widget).EnsureHandle(); widget.Show(); widget.Clamp(); SaveSettings(); NotifyWidgetsChanged(); return widget;
         }
         public void ManageShortcuts(ShortcutWidget group) { ShowManager(); Manager.SelectShortcutGroup(group); }
+        public void SetLanguage(string code)
+        {
+            if(Array.IndexOf(L.Codes,code)<0) return;
+            Settings.Language=code=="system"?null:code; L.Select(code); RefreshLanguage(); SaveSettings();
+        }
+        void LanguagePreferenceChanged(object sender,UserPreferenceChangedEventArgs e)
+        {
+            if(Settings.Language!=null || Dispatcher.HasShutdownStarted) return;
+            Dispatcher.BeginInvoke(new Action(delegate { if(Exiting || Settings.Language!=null) return; string before=L.Code; L.Select("system"); if(L.Code!=before) RefreshLanguage(); }));
+        }
+        void RefreshLanguage()
+        {
+            foreach(var widget in Widgets) widget.RefreshLanguage();
+            Clock.Refresh(DateTime.Now); Countdown.Refresh(); Todo.Refresh();
+            foreach(var widget in Widgets.OfType<ShortcutWidget>()) widget.Refresh();
+            if(Manager!=null) { Manager.Refresh(); Manager.RefreshMemory(); }
+            if(tray!=null) tray.RefreshLanguage();
+        }
         public void SetTheme(string mode) { Settings.Theme = mode; Theme.Refresh(); SaveSettings(); NotifyWidgetsChanged(); }
         public void SetOpacity(double value) { Settings.Opacity = Math.Max(.35, Math.Min(1, value)); Theme.Refresh(); ScheduleSettings(); NotifyWidgetsChanged(); }
         public void ArrangeWidgets()
         {
-            if(!Widgets.Any(w=>w.IsVisible && w.State.Mode==1)) { Error("没有可整理组件，请先显示组件并解除锁定。"); return; }
+            if(!Widgets.Any(w=>w.IsVisible && w.State.Mode==1)) { Error(L.T("没有可整理组件，请先显示组件并解除锁定。")); return; }
             if(!Ui.Confirm(Manager,"是否重置组件位置？")) return;
             ArrangeConfirmed();
         }
@@ -231,7 +251,7 @@ namespace DesktopWidgets
             foreach (string id in new[] { "clock", "todo", "shortcuts", "countdown", "note", "status" }.Concat(Widgets.Where(w=>IsShortcutInstance(w.State.Id)).Select(w=>w.State.Id)))
             {
                 var w = Widgets.Find(v => v.State.Id == id); if(!w.IsVisible || w.State.Mode!=1) continue; var point = Layout.FreeNear(work, anchor, placed, w.Width, w.Height);
-                var rect=new Rect(point.X,point.Y,w.Width,w.Height); if(placed.Any(v=>v.Visible && new Rect(v.Left,v.Top,v.Width,v.Height).IntersectsWith(rect))) { Error("屏幕空间不足，未重置位置。请先隐藏部分组件或调整尺寸。"); return; }
+                var rect=new Rect(point.X,point.Y,w.Width,w.Height); if(placed.Any(v=>v.Visible && new Rect(v.Left,v.Top,v.Width,v.Height).IntersectsWith(rect))) { Error(L.T("屏幕空间不足，未重置位置。请先隐藏部分组件或调整尺寸。")); return; }
                 var state=new WindowState { Id=id,Left=point.X,Top=point.Y,Width=w.Width,Height=w.Height,Visible=true }; placed.Add(state); changes.Add(state);
             }
             foreach(var state in changes) { var w=Widgets.Find(v=>v.State.Id==state.Id); w.Left=state.Left; w.Top=state.Top; w.Clamp(); }
@@ -240,7 +260,7 @@ namespace DesktopWidgets
         public bool ChangeAutoStart(bool enabled)
         {
             try { if (!Verifying) Native.SetAutoStart(enabled, executable); Settings.AutoStart = enabled; return SaveSettings(); }
-            catch (Exception ex) { Error("无法修改登录自启。\n" + ex.Message); return false; }
+            catch (Exception ex) { Error(L.T("无法修改登录自启。\n") + ex.Message); return false; }
         }
         void BuildTray()
         {
@@ -254,23 +274,23 @@ namespace DesktopWidgets
         {
             var menu = new ContextMenu(); menu.SetResourceReference(Control.BackgroundProperty, "Field"); menu.SetResourceReference(Control.ForegroundProperty, "Ink");
             MenuItem manageItem = Menu("管理组件…", ShowManager); manageItem.FontWeight = FontWeights.SemiBold; menu.Items.Add(manageItem); menu.Items.Add(new Separator());
-            for (int i = 0; i < Widgets.Count; i++) { WidgetWindow w = Widgets[i]; var item = Menu(w.DisplayName, delegate { w.SetVisible(!w.IsVisible); }); item.IsChecked = w.IsVisible; menu.Items.Add(item); }
+            for (int i = 0; i < Widgets.Count; i++) { WidgetWindow w = Widgets[i]; var item = Menu(w.DisplayName, delegate { w.SetVisible(!w.IsVisible); },false); item.IsChecked = w.IsVisible; menu.Items.Add(item); }
             menu.Items.Add(new Separator()); menu.Items.Add(Menu("新建快捷入口组件…",delegate { ShowManager(); Manager.PromptAddShortcutGroup(); })); menu.Items.Add(Menu("全部显示", RestoreAll)); menu.Items.Add(Menu("全部隐藏", HideAll));
-            var themes = new MenuItem { Header = "主题" }; string[] keys = UiChoices.ThemeKeys, labels = UiChoices.ThemeLabels;
+            var themes = new MenuItem { Header = L.T("主题") }; string[] keys = UiChoices.ThemeKeys, labels = UiChoices.ThemeLabels;
             for (int i = 0; i < keys.Length; i++) { string key = keys[i]; var item = Menu(labels[i], delegate { SetTheme(key); }); item.IsChecked = Settings.Theme == key; themes.Items.Add(item); } menu.Items.Add(themes);
-            var opacity = new MenuItem { Header = "背景不透明度" }; foreach (double value in new[] { .35, .55, .70, .85, 1.0 }) { double v = value; var item = Menu((v * 100).ToString("0") + "%", delegate { SetOpacity(v); }); item.IsChecked = Math.Abs(Settings.Opacity - v) < .001; opacity.Items.Add(item); } menu.Items.Add(opacity);
+            var opacity = new MenuItem { Header = L.T("背景不透明度") }; foreach (double value in new[] { .35, .55, .70, .85, 1.0 }) { double v = value; var item = Menu((v * 100).ToString("0") + "%", delegate { SetOpacity(v); }); item.IsChecked = Math.Abs(Settings.Opacity - v) < .001; opacity.Items.Add(item); } menu.Items.Add(opacity);
             var auto = Menu("登录自启", delegate { ChangeAutoStart(!Settings.AutoStart); NotifyWidgetsChanged(); }); auto.IsChecked = Settings.AutoStart; menu.Items.Add(auto);
             menu.Items.Add(new Separator()); menu.Items.Add(Menu("退出", delegate { Quit(); })); return menu;
         }
-        static MenuItem Menu(string title, Action action) { var item = new MenuItem { Header = title }; item.Click += delegate { action(); }; return item; }
+        static MenuItem Menu(string title, Action action,bool localize=true) { var item = localize?Ui.LocalMenu(title):new MenuItem { Header=title }; item.Click += delegate { action(); }; return item; }
         void DisplayChanged(object sender, EventArgs e) { Dispatcher.BeginInvoke(new Action(delegate { foreach (var w in Widgets) { if(w.State.Mode==3 && !w.TemporaryFront) w.RestoreDesktop(); else w.Clamp(); } SaveSettings(); })); }
         void Unhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
-        { Error("程序发生错误：" + e.Exception.Message); e.Handled = true; }
+        { Error(L.T("程序发生错误：") + e.Exception.Message); e.Handled = true; }
         public bool Quit()
         {
             bool saved = SaveData(); saved = SaveSettings() && saved;
-            if (!saved && !Verifying && MessageBox.Show("仍有内容保存失败，直接退出会丢失未保存修改。是否仍要退出？", "桌面小组件", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return false;
-            Exiting = true; scheduler.Stop(); SystemEvents.DisplaySettingsChanged -= DisplayChanged;
+            if (!saved && !Verifying && MessageBox.Show(L.T("仍有内容保存失败，直接退出会丢失未保存修改。是否仍要退出？"), L.T("桌面小组件"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return false;
+            Exiting = true; scheduler.Stop(); SystemEvents.DisplaySettingsChanged -= DisplayChanged; SystemEvents.UserPreferenceChanged -= LanguagePreferenceChanged;
             foreach (var w in Widgets) w.Close(); if (timerNotice != null) timerNotice.Close();
             if (Manager != null) Manager.Close();
             if (tray != null) tray.Dispose();

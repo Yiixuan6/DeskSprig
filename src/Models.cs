@@ -49,6 +49,7 @@ namespace DesktopWidgets
     [DataContract] public sealed class Settings
     {
         [DataMember] public int Version = 4;
+        [DataMember(EmitDefaultValue = false)] public string Language; // null follows the Windows display language
         [DataMember] public string Theme = "system";
         [DataMember] public double Opacity = 0.85;
         [DataMember] public bool AutoStart = true;
@@ -68,6 +69,7 @@ namespace DesktopWidgets
         {
             foreach (var w in Windows) { if (w.Width == 0) { w.Width = 280; } w.Width = Math.Max(240, w.Width); w.Height = Math.Max(Layout.MinimumHeight(w.Id), w.Height); }
             foreach (var w in Windows) { if (Version < 3) w.Mode = 1; }
+            if (Array.IndexOf(L.Codes, Language)<0 || Language=="system") Language=null;
             Version = 4;
         }
     }

@@ -23,6 +23,7 @@ $sources = Get-ChildItem -LiteralPath (Join-Path $taskRoot 'src') -Filter '*.cs'
 if (!(Test-Path (Join-Path $taskRoot 'assets\app.ico'))) { & (Join-Path $taskRoot 'build-assets.ps1') }
 $resources = @('/resource:' + (Join-Path $taskRoot 'assets\app.png') + ',Brand.png')
 $resources += '/resource:' + (Join-Path $taskRoot 'assets\icons\LICENSE') + ',FluentIcons.LICENSE'
+$resources += Get-ChildItem (Join-Path $taskRoot 'assets\languages') -Filter '*.json' | ForEach-Object { '/resource:' + $_.FullName + ',Languages.' + $_.Name }
 $resources += Get-ChildItem (Join-Path $taskRoot 'assets\icons') -Filter '*.svg' | ForEach-Object { '/resource:' + $_.FullName + ',Icons.' + $_.Name }
 & $compilerPath /nologo /target:winexe /platform:x64 /optimize+ /codepage:65001 /warn:4 "/out:$exePath" "/win32manifest:$generatedManifestPath" "/win32icon:$(Join-Path $taskRoot 'assets\app.ico')" $references $resources $sources
 if ($LASTEXITCODE -ne 0) { throw '编译失败，见上方诊断。' }

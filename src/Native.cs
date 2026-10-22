@@ -44,13 +44,13 @@ namespace DesktopWidgets
         {
             var info = new MonitorInfo { Size = Marshal.SizeOf(typeof(MonitorInfo)) };
             IntPtr h = new WindowInteropHelper(w).Handle;
-            if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref info)) throw new InvalidOperationException("无法读取屏幕工作区。");
+            if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref info)) throw new InvalidOperationException(L.T("无法读取屏幕工作区。"));
             return info.Work;
         }
         public static Rect WorkingArea(Rect proposed)
         {
             var info = new MonitorInfo { Size = Marshal.SizeOf(typeof(MonitorInfo)) };
-            if (!GetMonitorInfo(MonitorFromRect(ref proposed, 2), ref info)) throw new InvalidOperationException("无法读取目标屏幕工作区。");
+            if (!GetMonitorInfo(MonitorFromRect(ref proposed, 2), ref info)) throw new InvalidOperationException(L.T("无法读取目标屏幕工作区。"));
             return info.Work;
         }
         public static void Clamp(Window window)
@@ -112,7 +112,7 @@ namespace DesktopWidgets
         public Native.MemoryStatus Memory()
         {
             var m = new Native.MemoryStatus { Length = (uint)Marshal.SizeOf(typeof(Native.MemoryStatus)) };
-            if (!Native.GlobalMemoryStatusEx(ref m)) throw new InvalidOperationException("内存采样失败。");
+            if (!Native.GlobalMemoryStatusEx(ref m)) throw new InvalidOperationException(L.T("内存采样失败。"));
             return m;
         }
     }

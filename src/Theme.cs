@@ -51,7 +51,7 @@ namespace DesktopWidgets
             }
             catch (Exception ex)
             {
-                Status = "系统配色读取失败：" + ex.Message;
+                Status = L.T("系统配色读取失败：") + ex.Message;
                 ApplyPalette(SystemColors.HighlightColor, SystemColors.WindowColor, false, SystemParameters.HighContrast, false);
             }
         }

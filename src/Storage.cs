@@ -29,11 +29,11 @@ namespace DesktopWidgets
             }
             T recovered;
             try { recovered = Read<T>(backup, valid); }
-            catch (Exception ex) { throw new InvalidDataException(name + " 无法读取，且没有有效备份。原文件已保留，请先备份 data 文件夹再处理。", original ?? ex); }
+            catch (Exception ex) { throw new InvalidDataException(L.T("{0} 无法读取，且没有有效备份。原文件已保留，请先备份 data 文件夹再处理。",name), original ?? ex); }
             if (File.Exists(path)) File.Move(path, path + ".corrupt-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N").Substring(0, 6));
             // Backup was validated; copy without replacing it with a corrupt primary.
             File.Copy(backup, path, false);
-            RecoveryNotice += name + " 已从备份恢复；损坏文件已保留。\n";
+            RecoveryNotice += L.T("{0} 已从备份恢复；损坏文件已保留。\n",name);
             return recovered;
         }
         public static T Read<T>(string path, Func<T, bool> valid)
@@ -41,7 +41,7 @@ namespace DesktopWidgets
             using (var stream = File.OpenRead(path))
             {
                 T value = (T)new DataContractJsonSerializer(typeof(T)).ReadObject(stream);
-                if (!valid(value)) throw new InvalidDataException("数据版本或内容无效：" + path);
+                if (!valid(value)) throw new InvalidDataException(L.T("数据版本或内容无效：") + path);
                 return value;
             }
         }

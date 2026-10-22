@@ -32,12 +32,12 @@ namespace DesktopWidgets
         double dragScale;
         public new bool IsVisible { get { return Desktop != null && Desktop.Attached ? Desktop.Visible : base.IsVisible; } }
         public string Kind { get { return WidgetApp.KindOf(State.Id); } }
-        public string DisplayName { get { return State.DisplayName ?? WidgetApp.Names[Array.IndexOf(WidgetApp.Ids,Kind)]; } }
-        public static string ModeName(int mode) { return mode==1?"自由摆放":mode==2?"锁定位置与大小":"固定桌面"; }
+        public string DisplayName { get { return State.DisplayName ?? L.T(WidgetApp.Names[Array.IndexOf(WidgetApp.Ids,Kind)]); } }
+        public static string ModeName(int mode) { return L.T(mode==1?"自由摆放":mode==2?"锁定位置与大小":"固定桌面"); }
         bool ready, clamping;
-        public WidgetWindow(WidgetApp app, WindowState state, string title)
+        public WidgetWindow(WidgetApp app, WindowState state)
         {
-            App = app; State = state; Desktop=new DesktopHost(this); Title = "桌面小组件 · " + DisplayName; Icon = Icons.Brand;
+            App = app; State = state; Desktop=new DesktopHost(this); Title = L.T("桌面小组件 · {0}",DisplayName); Icon = Icons.Brand;
             Width = Math.Max(240, state.Width); Height = Math.Max(Layout.MinimumHeight(state.Id), state.Height); MinHeight = Layout.MinimumHeight(state.Id); MinWidth = 240;
             Left = state.Left; Top = state.Top; Topmost = state.Pinned;
             WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = true; Background = Brushes.Transparent;
@@ -51,11 +51,11 @@ namespace DesktopWidgets
             header.ColumnDefinitions.Add(new ColumnDefinition()); header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); header.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
             var heading = new Grid { VerticalAlignment = VerticalAlignment.Center }; heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto }); heading.ColumnDefinitions.Add(new ColumnDefinition());
             heading.Children.Add(Icons.Glyph(Kind, 20, "Ink"));
-            name=Ui.Text(DisplayName,14); name.FontWeight=FontWeights.SemiBold; name.Margin=new Thickness(9,0,3,0); name.TextWrapping=TextWrapping.NoWrap; name.TextTrimming=TextTrimming.CharacterEllipsis; name.ToolTip=DisplayName+"\n双击标题改名，右键更多操作"; Grid.SetColumn(name,1); heading.Children.Add(name);
+            name=Ui.Text(DisplayName,14); name.FontWeight=FontWeights.SemiBold; name.Margin=new Thickness(9,0,3,0); name.TextWrapping=TextWrapping.NoWrap; name.TextTrimming=TextTrimming.CharacterEllipsis; name.ToolTip=L.T("{0}\n双击标题改名，右键更多操作",DisplayName); Grid.SetColumn(name,1); heading.Children.Add(name);
             header.ContextMenu=RenameMenu();
             header.Children.Add(heading);
-            ModeButton=Ui.Button("", "切换组件固定档位", delegate { SetMode(State.Mode%3+1); }); ModeButton.Style=(Style)app.Resources["IconButton"]; Grid.SetColumn(ModeButton,1); header.Children.Add(ModeButton);
-            pin = Ui.Button("", "切换" + title + "置顶", delegate { SetPinned(!State.Pinned); }); pin.Style = (Style)app.Resources["IconButton"]; Grid.SetColumn(pin, 2); header.Children.Add(pin);
+            ModeButton=Ui.LocalButton("", "切换组件固定档位", delegate { SetMode(State.Mode%3+1); }); ModeButton.Style=(Style)app.Resources["IconButton"]; Grid.SetColumn(ModeButton,1); header.Children.Add(ModeButton);
+            pin = Ui.Button("", L.T("切换{0}置顶",DisplayName), delegate { SetPinned(!State.Pinned); }); pin.Style = (Style)app.Resources["IconButton"]; Grid.SetColumn(pin, 2); header.Children.Add(pin);
             header.MouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e)
             {
                 if (FindButton(e.OriginalSource as DependencyObject)) return;
@@ -128,7 +128,7 @@ namespace DesktopWidgets
             if (msg == 0x7E || msg == 0x2E0) Dispatcher.BeginInvoke(new Action(Clamp)); return IntPtr.Zero;
         }
         public void SetPinned(bool value) { if(State.Mode==3) return; State.Pinned = value; Topmost = TemporaryFront || value; UpdatePin(); App.SaveSettings(); App.NotifyWidgetsChanged(); }
-        void UpdatePin() { pin.Content = Icons.Glyph("pin", 17, State.Pinned ? "Accent" : "Muted"); pin.IsEnabled=State.Mode!=3; header.Cursor=State.Mode==1?Cursors.SizeAll:Cursors.Arrow; ModeButton.Content=Icons.Placement(State.Mode,16); ModeButton.ToolTip=ModeName(State.Mode)+"（点击切换）"; AutomationProperties.SetName(ModeButton,DisplayName+" · "+ModeButton.ToolTip); foreach(var g in grips) g.Visibility=State.Mode==1?Visibility.Visible:Visibility.Collapsed; }
+        void UpdatePin() { pin.Content = Icons.Glyph("pin", 17, State.Pinned ? "Accent" : "Muted"); pin.IsEnabled=State.Mode!=3; header.Cursor=State.Mode==1?Cursors.SizeAll:Cursors.Arrow; ModeButton.Content=Icons.Placement(State.Mode,16); ModeButton.ToolTip=L.T("{0}（点击切换）",ModeName(State.Mode)); AutomationProperties.SetName(ModeButton,DisplayName+" · "+ModeButton.ToolTip); foreach(var g in grips) g.Visibility=State.Mode==1?Visibility.Visible:Visibility.Collapsed; }
         public void SetVisible(bool value)
         { State.Visible = value; if(Desktop.Attached) Desktop.SetVisible(value); else if (value) { App.Theme.Refresh(); Show(); Clamp(); } else Hide(); App.SaveSettings(); App.NotifyWidgetsChanged(); }
         public bool SetMode(int mode)
@@ -138,7 +138,7 @@ namespace DesktopWidgets
             Desktop.Dispose(); State.Mode=mode; Topmost=mode!=3 && State.Pinned;
             if(State.Visible) Show(); Clamp();
             bool success=true;
-            if(mode==3) try { Desktop.Attach(); } catch(Exception ex) { State.Mode=2; State.Visible=true; Topmost=State.Pinned; Show(); App.Error("无法固定到桌面，已恢复到第 2 档锁定。\n"+ex.Message); success=false; }
+            if(mode==3) try { Desktop.Attach(); } catch(Exception ex) { State.Mode=2; State.Visible=true; Topmost=State.Pinned; Show(); App.Error(L.T("无法固定到桌面，已恢复到第 2 档锁定。\n")+ex.Message); success=false; }
             UpdatePin(); App.SaveSettings(); App.NotifyWidgetsChanged(); return success;
         }
         public void RestoreDesktop() { if(State.Mode==3 && !TemporaryFront) SetMode(3); }
@@ -154,15 +154,17 @@ namespace DesktopWidgets
         }
         public ContextMenu RenameMenu()
         {
-            var menu=new ContextMenu(); var rename=new MenuItem { Header="重命名" }; rename.Click+=delegate { PromptRename(); }; menu.Items.Add(rename);
-            var reset=new MenuItem { Header="恢复默认名称" }; reset.Click+=delegate { Rename(null); }; menu.Items.Add(reset); return menu;
+            var menu=new ContextMenu(); var rename=Ui.LocalMenu("重命名"); rename.Click+=delegate { PromptRename(); }; menu.Items.Add(rename);
+            var reset=Ui.LocalMenu("恢复默认名称"); reset.Click+=delegate { Rename(null); }; menu.Items.Add(reset); return menu;
         }
         public void PromptRename() { string value=Ui.Prompt(this,"组件名称（1–32 字）",DisplayName,32); if(value!=null) Rename(value); }
         public bool Rename(string value)
         {
             if(value!=null) { value=value.Trim(); if(value.Length<1 || value.Length>32) return false; }
-            State.DisplayName=value; Title="桌面小组件 · "+DisplayName; name.Text=DisplayName; name.ToolTip=DisplayName+"\n双击标题改名，右键更多操作"; AutomationProperties.SetName(this,Title); pin.ToolTip="切换"+DisplayName+"置顶"; Desktop.RefreshName(); UpdatePin(); App.SaveSettings(); App.NotifyWidgetsChanged(); return true;
+            State.DisplayName=value; RefreshLanguage(); App.SaveSettings(); App.NotifyWidgetsChanged(); return true;
         }
+        public void RefreshLanguage()
+        { Title=L.T("桌面小组件 · {0}",DisplayName); name.Text=DisplayName; name.ToolTip=L.T("{0}\n双击标题改名，右键更多操作",DisplayName); pin.ToolTip=L.T("切换{0}置顶",DisplayName); AutomationProperties.SetName(this,Title); AutomationProperties.SetName(pin,(string)pin.ToolTip); Desktop.RefreshName(); UpdatePin(); }
         List<Rect> SnapTargets(double scale)
         {
             var targets=new List<Rect>(); foreach(var widget in App.Widgets.Where(w=>w!=this && w.IsVisible)) { Native.Rect r; IntPtr handle=widget.Desktop.Attached?widget.Desktop.Handle:new WindowInteropHelper(widget).Handle; if(Native.GetWindowRect(handle,out r)) targets.Add(new Rect(r.Left/scale,r.Top/scale,(r.Right-r.Left)/scale,(r.Bottom-r.Top)/scale)); } return targets;
